@@ -65,10 +65,14 @@ class AuthenticatedUser(APIView):
 	permission_classes = [IsAuthenticated]
 
 	def get(self, request):
-		serializer = UserSerializer(request.user)
+		data = UserSerializer(request.user).data
 
+		# so FE can access data more directly in my first python LOOP
+		# this loop will return all the names of the permissions in an array
+		data['permissions'] = [p['name'] for p in data['role']['permissions']]
+		
 		return Response({
-			'data': serializer.data
+			'data': data
 		})
 
 
@@ -156,13 +160,26 @@ class UserGenericAPIView(
 		return self.list(request)
 	
 	def post(self, request):
+		# need to convert 'role_id' to role, and add a default pass for any user created
+		request.data.update({
+			'password': 1234,
+			'role': request.data['role_id']
+		})
 		return Response({
 			'data': self.create(request).data
 		})
 
 	def put(self, request, pk=None):
+		# partial_update() if we do not set a value, will not update
+
+		if request.data['role_id']:
+			request.data.update({
+			'password': 1234,
+			'role': request.data['role_id']
+		})
+
 		return Response({
-			'data': self.update(request).data
+			'data': self.partial_update(request).data
 		})
 
 	def delete(self, request, pk=None):
@@ -171,3 +188,31 @@ class UserGenericAPIView(
 		# return Response({
 		# 	'data': self.destroy(request).data
 		# })
+
+class ProfileInfoAPIView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def put(self, request, pk=None):
+		user = request.user
+		serializer = UserSerializer(user, data=request.data, partial=True)
+		serializer.is_valid(raise_exception=True)
+		serializer.save()
+		return Response(serializer.data)
+
+
+class ProfilePasswordAPIView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def put(self, request, pk=None):
+		user = request.user
+
+		if request.data['password'] != request.data['password_confirm']:
+			raise exceptions.ValidationError('Passwords do not match ididot')
+
+		serializer = UserSerializer(user, data=request.data, partial=True)
+		serializer.is_valid(raise_exception=True)
+		serializer.save()
+		return Response(serializer.data)
+	
