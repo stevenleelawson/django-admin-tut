@@ -65,10 +65,14 @@ class AuthenticatedUser(APIView):
 	permission_classes = [IsAuthenticated]
 
 	def get(self, request):
-		serializer = UserSerializer(request.user)
+		data = UserSerializer(request.user).data
 
+		# so FE can access data more directly in my first python LOOP
+		# this loop will return all the names of the permissions in an array
+		data['permissions'] = [p['name'] for p in data['role']['permissions']]
+		
 		return Response({
-			'data': serializer.data
+			'data': data
 		})
 
 
