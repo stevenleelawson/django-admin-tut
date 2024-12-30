@@ -9,6 +9,10 @@ class Order(models.Model):
 
 	# auto_now_add=True automatically adds the current datetime
 
+	@property
+	def name(self):
+		return self.first_name + ' ' + self.last_name
+
 class OrderItem(models.Model):
     product_title = models.CharField(max_length=200)
     price = models.DecimalField(max_digits=10, decimal_places=2)
